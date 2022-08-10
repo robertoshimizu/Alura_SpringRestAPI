@@ -103,7 +103,7 @@ INSERT INTO TOPICO(titulo, mensagem, data_criacao, status, autor_id, curso_id) V
 INSERT INTO TOPICO(titulo, mensagem, data_criacao, status, autor_id, curso_id) VALUES('Dúvida 3', 'Tag HTML', '2019-05-05 20:00:00', 'NAO_RESPONDIDO', 1, 2);
 ```
 
-#### 2.4 Spring JPA Repositorry, interfaces and methods
+#### 2.4 Spring JPA Repository, interfaces and methods
 
 It is also not a good practice to invoke database transactions directly from the Controller. Rather, use the Repository pattern.
 
@@ -155,3 +155,33 @@ But if do not want to use JPA nomenclature to name your method, build a manual q
 List<Topico> carregarPorNomeDoCurso(@Param("nomeCurso") String nomeCurso);
 
 ```
+
+#### POST Request
+
+In this case, the Controller needs a `PostMapping`, specify the entry URL, and control the format of the body. Then it invokes the repository using another DTO to execute the operation (add a record) in the database. If everything is succesful, it is a good practice to return a status code **201** back to the client, or manage any errors.
+
+```java
+@PostMapping
+    public ResponseEntity<TopicoDTO> cadastrar(@RequestBody TopicoForm form, UriComponentsBuilder uriBuilder) {
+
+        //  Need to convert TopicoForm to Topico
+        // For that we encapsulate conversion as method in TopicoForm
+        // TopicoForm only has the nomeCurso, but Topico needs a Curso object
+        // Therefore we create a Curso Repository and injects in the converter
+        // so the implementation of method converter can query nomeCurso and return the Curso object
+        Topico topico = form.converter(cursoRepository);
+        topicoRepository.save(topico);
+
+        URI uri = uriBuilder.path("/topicos/{id}").buildAndExpand(topico.getId()).toUri();
+        return ResponseEntity.created(uri).body(new TopicoDTO(topico));
+
+    }
+```
+
+For that we define a method `cadastrar` that returns a ResponseEntity of type `created` that will yield a status code 201. For that this method needs an URI of the newly resource created so it can be sent back to the client along with a body that displays a new TopicDTO.
+
+Spring has methods to create URI, and it uses the same prefix from the client, that's why it is invoked in the signature of cadastra method after the BodyRequest. With this, it can create the uri, specifying only the latter path ("/topicos/id"), and get the newly created id from topico.getid().
+
+#### Bean Validation
+
+How to ensure the data coming from the client is correct, so the controller can execute the Repository correctly? We could build mannually a series of data checks (fields missing, fields wrong type values, fields with values not in Range, etc) and return error messages back to the client. Luckly Spring has a library called `Bean Validation` that makes it easier to do it.
