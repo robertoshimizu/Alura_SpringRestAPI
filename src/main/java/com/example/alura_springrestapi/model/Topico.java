@@ -27,6 +27,14 @@ public class Topico {
 		result = prime * result + ((id == null) ? 0 : id.hashCode());
 		return result;
 	}
+	public Topico() {
+	}
+
+	public Topico(String titulo, String mensagem, Curso curso) {
+		this.titulo = titulo;
+		this.mensagem = mensagem;
+		this.curso = curso;
+	}
 
 	@Override
 	public boolean equals(Object obj) {

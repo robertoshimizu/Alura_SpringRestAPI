@@ -69,6 +69,8 @@ This is necessary, so Spring will build tables in the database accordingly.
 
 **Warning:** DO not define a constructor in the Entity classes, because SpringJPA will internally instatiate them.
 
+A JavaBean is a POJO that is serializable, has a no-argument constructor, and allows access to properties using getter and setter methods that follow a simple naming convention.
+
 ```java
 @Entity
 public class Usuario {
@@ -79,7 +81,8 @@ public class Usuario {
 	private String email;
 	private String senha;
 
-    < DO NOT CREATE A CONSTRUCTOR >
+//No-argument Constructor
+    Usuario(){};
 ```
 
 Notice that IntellJ also checks the relationships, for example, `@ManyToOne` between different Entities.
@@ -104,6 +107,51 @@ INSERT INTO TOPICO(titulo, mensagem, data_criacao, status, autor_id, curso_id) V
 
 It is also not a good practice to invoke database transactions directly from the Controller. Rather, use the Repository pattern.
 
-In Spring, you can create an interface Repository, which inherits from JPARepository from Spring Data JPA. This interface has several methods that encapsulates database queries. There is a specific pattern to create queries, for example `findbyCursoNome` -> it SELECT the Curso Table and then filter WHERE nome = ?, all under the hood.
+In Spring, you can create an interface Repository, which inherits from JPARepository from Spring Data JPA. This interface has several methods that encapsulates database queries. There is a specific pattern to create queries, **just build a signature method using nomeclature, concatenating atributes** for example `findbyCursoNome` -> it SELECT attribute `curso` in the Table Topico and then JOIN attribute `nome` in the Curso Table, all under the hood.
 
-Nut if you need to create a manual query, build a method and annotate with @Query.
+```java
+public interface TopicoRepository extends JpaRepository<Topico,Long> {
+    List<Topico> findByCurso_Nome(String nomeCurso);
+}
+```
+
+Notice that it must be a relationship between these atributes. You can concatenate several attributes, for example: `findByCurso_Categoria_Nome`.... The underline is helpful to desambiguate a potential single atribute named CursoCategoriaNome.
+
+```java
+
+@Entity
+public class Topico {
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long id;
+	private String titulo;
+	private String mensagem;
+	private LocalDateTime dataCriacao = LocalDateTime.now();
+	@Enumerated(EnumType.STRING)
+	private StatusTopico status = StatusTopico.NAO_RESPONDIDO;
+	@ManyToOne
+	private Usuario autor;
+	@ManyToOne
+	private Curso curso;
+	@OneToMany(mappedBy = "topico")
+	private List<Resposta> respostas = new ArrayList<>();
+
+```
+
+```java
+@Entity
+public class Curso {
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long id;
+	private String nome;
+	private String categoria;
+```
+
+But if do not want to use JPA nomenclature to name your method, build a manual query and annotate with @Query.
+
+```java
+@Query("SELECT t FROM Topico t WHERE t.curso.nome = :nomeCurso")
+List<Topico> carregarPorNomeDoCurso(@Param("nomeCurso") String nomeCurso);
+
+```
