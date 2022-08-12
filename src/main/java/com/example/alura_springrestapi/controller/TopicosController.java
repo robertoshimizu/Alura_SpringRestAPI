@@ -40,6 +40,7 @@ public class TopicosController {
     }
 
     @PostMapping
+    @Transactional
     public ResponseEntity<TopicoDTO> cadastrar(@RequestBody @Valid TopicoForm form, UriComponentsBuilder uriBuilder) {
         //  Need to convert TopicoForm to Topico
         // For that we encapsulate conversion as method in TopicoForm
@@ -53,17 +54,33 @@ public class TopicosController {
         return ResponseEntity.created(uri).body(new TopicoDTO(topico));
     }
     @GetMapping("/{id}")
-    public TopicoDetalhadoDTO oneTopico(@PathVariable("id") Long id){
-        Topico topico = topicoRepository.getReferenceById(id);
-        TopicoDetalhadoDTO dto = new TopicoDetalhadoDTO(topico);;
-        return dto;
+    public ResponseEntity<TopicoDetalhadoDTO> oneTopico(@PathVariable("id") Long id){
+        Optional<Topico> topico = topicoRepository.findById(id);
+        if (topico.isPresent()) {
+            TopicoDetalhadoDTO dto = new TopicoDetalhadoDTO(topico.get());
+            return ResponseEntity.ok(dto);
+        }
+        return ResponseEntity.notFound().build();
     }
 
     @PutMapping("/{id}")
     @Transactional
     public ResponseEntity<TopicoDTO> update(@PathVariable("id") Long id,@RequestBody @Valid AtualizacaoTopicoForm form) {
-        Topico topico = form.atualizar(id, topicoRepository);
-
-        return ResponseEntity.ok(new TopicoDTO(topico));
+        Optional<Topico> topico = topicoRepository.findById(id);
+        if (topico.isPresent()) {
+            form.atualizar(id, topicoRepository);
+            return ResponseEntity.ok(new TopicoDTO(topico.get()));
+        }
+        return ResponseEntity.notFound().build();
+    }
+    @DeleteMapping("{id}")
+    @Transactional
+    public ResponseEntity<?> deleteTopic(@PathVariable("id") Long id){
+        Optional<Topico> topico = topicoRepository.findById(id);
+        if (topico.isPresent()) {
+            topicoRepository.deleteById(id);
+            return ResponseEntity.ok().build();
+        }
+        return ResponseEntity.notFound().build();
     }
 }

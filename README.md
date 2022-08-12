@@ -271,6 +271,40 @@ Here again, the controller delivers a DTO (TopicoDetalhadoDTO).
 
 ### 6. Other CRUD Operations
 
+Here we also included a verification whether the `id` in the request exists. For that we make a request `topicoRepository.findById(id)` to return a `Optional`. If the Optional exists, the make the transaction, otherwise return a `ResponseEntity.notFound().build()`.
+
 #### 6.1 Update
 
+Here we also use a specific DTO, because we may update just a certain number of fields rather than all of them. Therefore we create the class `AtualizacaoTopicoForm`.
 
+And then we use a method `atualizar` that encapsulates the mapping from the form to the `Topico`. The annotation `@Transactional` make sure the databse record is updated.
+
+```java
+@PutMapping("/{id}")
+    @Transactional
+    public ResponseEntity<TopicoDTO> update(@PathVariable("id") Long id,@RequestBody @Valid AtualizacaoTopicoForm form) {
+        Optional<Topico> topico = topicoRepository.findById(id);
+        if (topico.isPresent()) {
+            form.atualizar(id, topicoRepository);
+            return ResponseEntity.ok(new TopicoDTO(topico.get()));
+        }
+        return ResponseEntity.notFound().build();
+    }
+```
+
+#### 6.2 Delete
+
+This is similar as above.
+
+```java
+@DeleteMapping("{id}")
+    @Transactional
+    public ResponseEntity<?> deleteTopic(@PathVariable("id") Long id){
+        Optional<Topico> topico = topicoRepository.findById(id);
+        if (topico.isPresent()) {
+            topicoRepository.deleteById(id);
+            return ResponseEntity.ok().build();
+        }
+        return ResponseEntity.notFound().build();
+    }
+```
