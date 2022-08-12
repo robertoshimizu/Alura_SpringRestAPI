@@ -127,7 +127,7 @@ List<Topico> carregarPorNomeDoCurso(@Param("nomeCurso") String nomeCurso);
 
 ```
 
-#### POST Request
+#### 3. POST Request
 
 In this case, the Controller needs a `PostMapping`, specify the entry URL, and control the format of the body. Then it invokes the repository using another DTO to execute the operation (add a record) in the database. If everything is succesful, it is a good practice to return a status code **201** back to the client, or manage any errors.
 
@@ -163,7 +163,7 @@ For that we define a method `cadastrar` that returns a ResponseEntity of type `c
 
 Spring has methods to create URI, and it uses the same prefix from the client, that's why it is invoked in the signature of cadastra method after the BodyRequest. With this, it can create the uri, specifying only the latter path ("/topicos/id"), and get the newly created id from topico.getid().
 
-#### Bean Validation
+#### 4. Bean Validation
 
 How to ensure the data coming from the client is correct, so the controller can execute the Repository correctly? We could build manually a series of data checks (fields missing, fields wrong type values, fields with values not in Range, etc) and return error messages back to the client. Luckly Spring has a library called [`Bean Validation`](https://docs.spring.io/spring-framework/docs/3.2.x/spring-framework-reference/html/validation.html) that makes it easier to do it. First thing is to add this dependency in POM.xml
 
@@ -198,7 +198,7 @@ Lastly, you need to inform the Controller that object coming from @BodyRequest s
 
 Now, when the post request comes with data that is not Valid by Bean Validation, then Spring automatically rejects is and send back a response code 400 - Bad Request followed by a extense `Stack Trace` Error in JSON. In the next section, we will customize/simplify the message.
 
-##### Customizing BadResponse message to client
+##### 4.1 Customizing BadResponse message to client
 
 A good practice is to create a package/class to handle error treatment. So every time there is an validation error, this handler class will intercept the bad request message and treat it as you define.
 
@@ -239,4 +239,38 @@ public class ErroDeFormularioDto {
     }
 ```
 
-#### Other CRUD Operations
+#### 5. Get Request (one element)
+
+Example of requesting to get a specific topic by its `id`.
+
+```java
+@GetMapping("/{id}")
+    public TopicoDetalhadoDTO oneTopico(@PathVariable("id") Long id){
+        Topico topico = topicoRepository.getReferenceById(id);
+        TopicoDetalhadoDTO dto = new TopicoDetalhadoDTO(topico);;
+        return dto;
+    }
+```
+
+Here again, the controller delivers a DTO (TopicoDetalhadoDTO).
+
+```java
+// Constructor
+ public TopicoDetalhadoDTO(Topico topico) {
+        this.id = topico.getId();
+        this.titulo = topico.getTitulo();
+        this.mensagem = topico.getMensagem();
+        this.dataCriacao = topico.getDataCriacao();
+        this.curso= topico.getCurso();
+        this.status=topico.getStatus();
+        this.autor = topico.getAutor();
+        //this.respostas = topico.getRespostas();
+        this.respostas.addAll(topico.getRespostas().stream().map(RespostaDto::new).collect(Collectors.toList()));
+    }
+```
+
+### 6. Other CRUD Operations
+
+#### 6.1 Update
+
+

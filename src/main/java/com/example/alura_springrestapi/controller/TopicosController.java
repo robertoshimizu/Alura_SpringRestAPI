@@ -1,6 +1,8 @@
 package com.example.alura_springrestapi.controller;
 
 import com.example.alura_springrestapi.controller.dto.TopicoDTO;
+import com.example.alura_springrestapi.controller.dto.TopicoDetalhadoDTO;
+import com.example.alura_springrestapi.controller.form.AtualizacaoTopicoForm;
 import com.example.alura_springrestapi.controller.form.TopicoForm;
 
 import com.example.alura_springrestapi.model.Topico;
@@ -11,9 +13,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import javax.transaction.Transactional;
 import javax.validation.Valid;
 import java.net.URI;
 import java.util.List;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/topicos")
@@ -25,7 +29,7 @@ public class TopicosController {
     private CursoRepository cursoRepository;
 
     @GetMapping
-    public List<TopicoDTO> lista(String nomeCurso) {
+    public List<TopicoDTO> listaTopicos(String nomeCurso) {
         if (nomeCurso == null) {
             List<Topico> topicos = topicoRepository.findAll();
             return TopicoDTO.converter(topicos);
@@ -37,7 +41,6 @@ public class TopicosController {
 
     @PostMapping
     public ResponseEntity<TopicoDTO> cadastrar(@RequestBody @Valid TopicoForm form, UriComponentsBuilder uriBuilder) {
-
         //  Need to convert TopicoForm to Topico
         // For that we encapsulate conversion as method in TopicoForm
         // TopicoForm only has the nomeCurso, but Topico needs a Curso object
@@ -48,6 +51,19 @@ public class TopicosController {
 
         URI uri = uriBuilder.path("/topicos/{id}").buildAndExpand(topico.getId()).toUri();
         return ResponseEntity.created(uri).body(new TopicoDTO(topico));
+    }
+    @GetMapping("/{id}")
+    public TopicoDetalhadoDTO oneTopico(@PathVariable("id") Long id){
+        Topico topico = topicoRepository.getReferenceById(id);
+        TopicoDetalhadoDTO dto = new TopicoDetalhadoDTO(topico);;
+        return dto;
+    }
 
+    @PutMapping("/{id}")
+    @Transactional
+    public ResponseEntity<TopicoDTO> update(@PathVariable("id") Long id,@RequestBody @Valid AtualizacaoTopicoForm form) {
+        Topico topico = form.atualizar(id, topicoRepository);
+
+        return ResponseEntity.ok(new TopicoDTO(topico));
     }
 }
