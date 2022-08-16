@@ -363,3 +363,25 @@ We can now make a `GET` request with the following syntax:
 ```bash
 curl -i -H "Accept: application/json" -H "Content-Type: application/json" "http://localhost:8080/topicos?num_pagina=0&qtd_por_pagina=1"
 ```
+#### 8. Sorting
+
+The Pageable object has already Sort attribute, that once informed, Spring Data JPA will use it automatically.
+
+```java
+@GetMapping
+    public Page<TopicoDTO> listaTopicos(@RequestParam(required = false) String nomeCurso,
+                                        @RequestParam @PathVariable("pagina") int num_pagina,
+                                        @RequestParam @PathVariable("qtd") int qtd_por_pagina, @RequestParam String ordenacao) {
+
+        Pageable paginacao = PageRequest.of(num_pagina, qtd_por_pagina, Sort.Direction.ASC, ordenacao);
+```
+**Alternatively** you can simplify, by requiring a `Pageable` object from the client, adding to the Controller signature.
+
+```java
+@GetMapping
+    public Page<TopicoDTO> listaTopicos(@RequestParam(required = false) String nomeCurso,
+                                        @RequestParam @PathVariable("pagina") int num_pagina,
+                                        @RequestParam @PathVariable("qtd") int qtd_por_pagina, @RequestParam String ordenacao) {
+
+        Pageable paginacao = PageRequest.of(num_pagina, qtd_por_pagina, Sort.Direction.ASC, ordenacao);
+```

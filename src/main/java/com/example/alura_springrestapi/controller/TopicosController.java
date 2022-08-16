@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -34,9 +35,9 @@ public class TopicosController {
     @GetMapping
     public Page<TopicoDTO> listaTopicos(@RequestParam(required = false) String nomeCurso,
                                         @RequestParam @PathVariable("pagina") int num_pagina,
-                                        @RequestParam @PathVariable("qtd") int qtd_por_pagina) {
+                                        @RequestParam @PathVariable("qtd") int qtd_por_pagina, @RequestParam String ordenacao) {
 
-        Pageable paginacao = PageRequest.of(num_pagina, qtd_por_pagina);
+        Pageable paginacao = PageRequest.of(num_pagina, qtd_por_pagina, Sort.Direction.ASC, ordenacao);
 
         if (nomeCurso == null) {
             Page<Topico> topicos = topicoRepository.findAll(paginacao);
