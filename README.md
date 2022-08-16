@@ -4,6 +4,8 @@ _from Alura_
 
 **SpringDevTools** does not work natively in IntelliJ. Need to add options in Settings.
 
+**Information about methods**: cursor plus `Ctrl+Shift+I`
+
 ### 1. Controllers
 
 The first difference from a traditional SpringMVC, is that you need to add `@ResponseBody` after the `@RequestMapping("/")` so that Spring will not look for a page (JSP or html) to return, but rather the API response in `json`.
@@ -21,15 +23,6 @@ public class TopicosController {
 ```
 
 Alternatively, you may use the annotation `@RestController` which in this case Spring will know already that this is a RESTAPI and you do not need to add `@ResponseBody`.
-
-#### 1.1 Use of DTO (Data Transfer Object Pattern)
-
-It is not good practice to return a Domain Class, in the above case, the class `Topico`, because this class has lots of attributes, and perhaps I just want to return one or two of them.
-
-Data Transfer Object (DTO) or simply Transfer Object is a design pattern widely used in Java for transporting data between different components of a system, different instances or processes of a distributed system or different systems via serialization.
-The idea is basically to group a set of attributes in a simple class in order to optimize communication.
-In a remote call, it would be inefficient to pass each attribute individually. Likewise, it would be inefficient or even cause errors to pass a more complex entity.
-Also, often the data used in the communication does not exactly reflect the attributes of your model. So, a DTO would be a class that provides exactly what is needed for a given process.
 
 ### 2. SpringData JPA
 
@@ -127,9 +120,18 @@ List<Topico> carregarPorNomeDoCurso(@Param("nomeCurso") String nomeCurso);
 
 ```
 
+#### 2.5 Use of DTO (Data Transfer Object Pattern)
+
+It is not good practice to return a Domain Class, in the above case, the class `Topico`, because this class has lots of attributes, and perhaps I just want to return one or two of them.
+
+Data Transfer Object (DTO) or simply Transfer Object is a design pattern widely used in Java for transporting data between different components of a system, different instances or processes of a distributed system or different systems via serialization.
+The idea is basically to group a set of attributes in a simple class in order to optimize communication.
+In a remote call, it would be inefficient to pass each attribute individually. Likewise, it would be inefficient or even cause errors to pass a more complex entity.
+Also, often the data used in the communication does not exactly reflect the attributes of your model. So, a DTO would be a class that provides exactly what is needed for a given process.
+
 #### 3. POST Request
 
-In this case, the Controller needs a `PostMapping`, specify the entry URL, and control the format of the body. Then it invokes the repository using another DTO to execute the operation (add a record) in the database. If everything is succesful, it is a good practice to return a status code **201** back to the client, or manage any errors.
+In this case, the Controller needs a `PostMapping`, specify the entry URL, and control the format of the body. Then it invokes the repository using another DTO to execute the operation (add a record) in the database. If everything is successful, it is a good practice to return a status code **201** back to the client, or manage any errors.
 
 The `@RequestBody` annotation maps the HttpRequest body to a transfer (DTO) or domain object, enabling automatic deserialization (using Jackson) of the inbound HttpRequest body onto a Java object.
 
@@ -239,6 +241,12 @@ public class ErroDeFormularioDto {
     }
 ```
 
+Make a test in bash or postman:
+
+```bash
+curl -X POST -H "Content-Type: application/json" -d '{"titulo": "Erro de Sistema Hoje", "message":"Deu pau Juvenal de novo", "nomeCurso":"Spring Boot"}' "http://localhost:8080/topicos"
+```
+
 #### 5. Get Request (one element)
 
 Example of requesting to get a specific topic by its `id`.
@@ -307,4 +315,51 @@ This is similar as above.
         }
         return ResponseEntity.notFound().build();
     }
+```
+
+#### 7. Add pagination
+
+We can deal with pagination using Spring classes/interfaces `Page`, `Pageable`, `pageRequest` and passing the `pageable` object as a parameter to the repository. Spring methods already know that, when a pageable arrives, it's to do the pagination via JPA and the pagination logic is done automatically.
+(import org.springframework.data.domain.Pageable;).
+
+In the code below, we replaced the return type of the controller from `List<TopicoDTO>` to a `Page<TopicoDTO>`. The `Page` object contains not only the data, but also information about the page, so the client can display them as it has requested using `@RequestParam` pagina and qtd.
+
+```java
+@GetMapping
+    public Page<TopicoDTO> listaTopicos(@RequestParam(required = false) String nomeCurso,
+                                        @RequestParam @PathVariable("pagina") int num_pagina,
+                                        @RequestParam @PathVariable("qtd") int qtd_por_pagina) {
+
+        Pageable paginacao = PageRequest.of(num_pagina, qtd_por_pagina);
+
+        if (nomeCurso == null) {
+            Page<Topico> topicos = topicoRepository.findAll(paginacao);
+            return TopicoDTO.converter(topicos);
+        } else {
+            Page<Topico> topicos = topicoRepository.findByCurso_Nome(nomeCurso, paginacao);
+            return TopicoDTO.converter(topicos);
+        }
+    }
+```
+
+The repository will now accept a `Pageable` object to perform the query, which returns a `Topico` object from the database:
+
+```java
+public interface TopicoRepository extends JpaRepository<Topico,Long> {
+    Page<Topico> findByCurso_Nome(String nomeCurso, Pageable paginacao);
+}
+```
+
+And lastly, we transform the `Topico` object into a `TopicoDTO`:
+
+```java
+ public static Page<TopicoDTO> converter(Page<Topico> topicos) {
+        return topicos.map(TopicoDTO::new);
+    }
+```
+
+We can now make a `GET` request with the following syntax:
+
+```bash
+curl -i -H "Accept: application/json" -H "Content-Type: application/json" "http://localhost:8080/topicos?num_pagina=0&qtd_por_pagina=1"
 ```
