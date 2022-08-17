@@ -399,3 +399,59 @@ public class ForumApplication {
 
 }
 ```
+
+Now, the parameters need to be informed in English: page, size, etc.
+
+#### 9. Caching
+
+First need to add the dependency in `pom.xml`
+
+```xml
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-cache</artifactId>
+</dependency>
+```
+
+For **Production** you need to provide also a Cache dependency such as Redis. But for development, it is not necessary.
+
+Second, we need to enable Cache in the `main` application:
+
+```java
+@SpringBootApplication
+@EnableSpringDataWebSupport
+@EnableCaching
+public class ForumApplication {
+
+    public static void main(String[] args) {
+        SpringApplication.run(ForumApplication.class, args);
+    }
+
+}
+```
+
+Third, we need to identify which Controller/method we want to cache, providing the annotation `@Cacheable(value = "listaTopicos")` and an id/value.
+
+```java
+@GetMapping
+@Cacheable(value = "listaTopicos")
+public Page<TopicoDTO> listaTopicos(@RequestParam(required = false) String nomeCurso,
+                                    @PageableDefault(sort = "id", direction = Sort.Direction.ASC, page = 0,size = 10)
+                                    Pageable paginacao)
+```
+
+If you want to monitor if Spring really store last info in Cache, enable to show sql queries in the logs. Add `spring.jpa.properties.hibernate.show_sql=true` and `spring.jpa.properties.hibernate.format_sql=true` in `application.properties`.
+
+Cache management is very important, because it avoids requesting over and over with same parameters, especially from a static table in the DB. Now if the table is dynamic, you need to clean the cache everytime the table in the DB is updated.
+In this case, we need to annotate all the POST/PUT/PATCH/DELETE calls with `@CacheEvict`, i.e., every call that modify the state of the table db.
+
+```java
+  @PostMapping
+  @Transactional
+  @CacheEvict(value = "listaTopicos", allEntries = true)
+    public ResponseEntity<TopicoDTO> cadastrar(@RequestBody @Valid TopicoForm form, UriComponentsBuilder uriBuilder)
+```
+
+**Cache** is good with Tables that rarely changes, otherwise the overhead to validate/clean becomes high.
+
+### 10. Spring Security

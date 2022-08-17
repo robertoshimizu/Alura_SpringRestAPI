@@ -9,6 +9,8 @@ import com.example.alura_springrestapi.model.Topico;
 import com.example.alura_springrestapi.repository.CursoRepository;
 import com.example.alura_springrestapi.repository.TopicoRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -34,6 +36,7 @@ public class TopicosController {
     private CursoRepository cursoRepository;
 
     @GetMapping
+    @Cacheable(value = "listaTopicos")
     public Page<TopicoDTO> listaTopicos(@RequestParam(required = false) String nomeCurso,
                                         @PageableDefault(sort = "id", direction = Sort.Direction.ASC, page = 0,size = 10)
                                         Pageable paginacao) {
@@ -49,6 +52,7 @@ public class TopicosController {
 
     @PostMapping
     @Transactional
+    @CacheEvict(value = "listaTopicos", allEntries = true)
     public ResponseEntity<TopicoDTO> cadastrar(@RequestBody @Valid TopicoForm form, UriComponentsBuilder uriBuilder) {
         //  Need to convert TopicoForm to Topico
         // For that we encapsulate conversion as method in TopicoForm
@@ -73,6 +77,7 @@ public class TopicosController {
 
     @PutMapping("/{id}")
     @Transactional
+    @CacheEvict(value = "listaTopicos", allEntries = true)
     public ResponseEntity<TopicoDTO> update(@PathVariable("id") Long id,@RequestBody @Valid AtualizacaoTopicoForm form) {
         Optional<Topico> topico = topicoRepository.findById(id);
         if (topico.isPresent()) {
@@ -83,6 +88,7 @@ public class TopicosController {
     }
     @DeleteMapping("{id}")
     @Transactional
+    @CacheEvict(value = "listaTopicos", allEntries = true)
     public ResponseEntity<?> deleteTopic(@PathVariable("id") Long id){
         Optional<Topico> topico = topicoRepository.findById(id);
         if (topico.isPresent()) {
