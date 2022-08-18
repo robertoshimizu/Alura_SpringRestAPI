@@ -455,3 +455,117 @@ In this case, we need to annotate all the POST/PUT/PATCH/DELETE calls with `@Cac
 **Cache** is good with Tables that rarely changes, otherwise the overhead to validate/clean becomes high.
 
 ### 10. Spring Security
+
+#### Autorization
+
+Spring Security is a framework that provides authentication, authorization, and protection against common attacks.
+
+The WebSecurityConfig class is annotated with `@EnableWebSecurity` to enable Spring Security’s web security support
+and
+provide the Spring MVC integration. It also extends `WebSecurityConfigurerAdapter` and overrides a couple of its methods
+to set some specifics of the web security configuration.
+The `configure(HttpSecurity)` method defines which URL paths should be secured and which should not. Specifically, any
+paths are configured to require an authentication.
+
+```java
+@EnableWebSecurity
+@Configuration
+public class SecurityConfigurations extends WebSecurityConfigurerAdapter {
+
+    // Deals with Authentication
+    @Override
+    protected void configure(AuthenticationManagerBuilder auth) throws Exception {
+        super.configure(auth);
+    }
+
+    // Deals with Authorization
+    @Override
+    protected void configure(HttpSecurity http) throws Exception {
+        http.authorizeRequests()
+                .antMatchers(HttpMethod.GET, "/topicos").permitAll()
+                .antMatchers(HttpMethod.GET, "/topicos/*").permitAll()
+                .anyRequest().authenticated();
+    }
+
+    // Deals with resources: html, css, js
+    @Override
+    public void configure(WebSecurity web) throws Exception {
+        super.configure(web);
+    }
+
+}
+```
+
+When a user successfully logs in, they are redirected to the previously requested url that required authentication. Now, we need then to configure how a user gets authenticated.
+
+#### Authentication
+
+Here we need to define the idea of an `user` of the system, the one who will be authenticated. We are using the class `Usuario`. Now we need to tell Spring to use this class, so we implement the UserDetails interface and implement its methods.
+
+```java
+@Entity
+public class Usuario implements UserDetails {
+
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long id;
+	private String nome;
+	private String email;
+	private String senha;
+
+    @ManyToMany(fetch = FetchType.EAGER)
+	private List<Perfil> perfis = new ArrayList<>(); // New attribute see below
+```
+
+New methods: getAuthorities(), getPassword(), getUsername(),isAccountNonExpired(), isAccountNonLocked(), isCredentialsNonExpired()
+
+**Important** complete the implementation of the above methods, by indicating the return, and setting true (to avoid blocking, enabling, etc).
+
+We also need to create a UserProfile class (admin, etc) and tell Spring to use it by implementeing the interface `GrantedAuthority`
+
+```java
+public class Perfil implements GrantedAuthority {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    private String nomePerfil;
+```
+
+#### Authentication Logic
+
+Now we need to implement the auth logic, if it needs to access info in a database, or an auth service, etc.
+
+A lógica de autenticação, que consulta o usuário no banco de dados, deve implementar a interface `UserDetailsService`.
+
+```java
+@Service
+public class AutenticacaoService implements UserDetailsService {
+
+    @Autowired
+    UsuarioRepository repository;
+
+    @Override
+    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+        Optional<Usuario> usuario = repository.findByEmail(username);
+        if (usuario.isPresent()) {
+            return usuario.get();
+        }
+        throw new UsernameNotFoundException("Usuario nao encontrado");
+    }
+}
+```
+
+Devemos indicar ao Spring Security qual o algoritmo de hashing de senha que utilizaremos na API, chamando o método passwordEncoder(), dentro do método configure(AuthenticationManagerBuilder auth), que está na classe SecurityConfigurations.
+
+```java
+@EnableWebSecurity
+@Configuration
+public class SecurityConfigurations extends WebSecurityConfigurerAdapter {
+    @Autowired
+    private UserDetailsService autenticacaoService;
+    // Deals with Authentication
+    @Override
+    protected void configure(AuthenticationManagerBuilder auth) throws Exception {
+        auth.userDetailsService(autenticacaoService).passwordEncoder(new BCryptPasswordEncoder());
+    }
+```
