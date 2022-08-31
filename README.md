@@ -460,6 +460,8 @@ In this case, we need to annotate all the POST/PUT/PATCH/DELETE calls with `@Cac
 
 Spring Security is a framework that provides authentication, authorization, and protection against common attacks.
 
+We configure Spring Security in the `SecurityConfigurations.java` file.
+
 The WebSecurityConfig class is annotated with `@EnableWebSecurity` to enable Spring Security’s web security support
 and
 provide the Spring MVC integration. It also extends `WebSecurityConfigurerAdapter` and overrides a couple of its methods
@@ -569,3 +571,29 @@ public class SecurityConfigurations extends WebSecurityConfigurerAdapter {
         auth.userDetailsService(autenticacaoService).passwordEncoder(new BCryptPasswordEncoder());
     }
 ```
+
+#### Authentication via Token
+
+Install the following dependency
+```xml
+<dependency>
+    <groupId>io.jsonwebtoken</groupId>
+     <artifactId>jjwt</artifactId>
+     <version>0.9.1</version>
+</dependency>
+```
+Now, ammend the code below, removing the form login, disable the csrf and add a Stateless session, i.e. the app will no longer hold a session in memory. Now, the client need to present a token to authenticate.
+
+```java
+@Override
+    protected void configure(HttpSecurity http) throws Exception {
+        http.authorizeRequests()
+                .antMatchers(HttpMethod.GET, "/topicos").permitAll()
+                .antMatchers(HttpMethod.GET, "/topicos/*").permitAll()
+                .anyRequest().authenticated()
+                .and().csrf().disable()   // disable protection against attacks
+                .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS);
+    }
+```
+
+Now we need to add a Controller for these new requests, given we no longer have a login form.
