@@ -1,5 +1,6 @@
 package com.example.alura_springrestapi.controller;
 
+import com.example.alura_springrestapi.controller.dto.TokenDTO;
 import com.example.alura_springrestapi.controller.form.LoginForm;
 import com.example.alura_springrestapi.secutity.TokenService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,7 +22,7 @@ public class AuthenticationController {
     private TokenService tokenService;
 
     @PostMapping
-    public ResponseEntity<?> autenticar(@RequestBody @Valid LoginForm form) {
+    public ResponseEntity<TokenDTO> autenticar(@RequestBody @Valid LoginForm form) {
 
         UsernamePasswordAuthenticationToken dadosLogin = form.converter();
 
@@ -29,12 +30,9 @@ public class AuthenticationController {
             Authentication authentication = authManager.authenticate(dadosLogin);
 
             String token = tokenService.gerarToken(authentication);
-            System.out.println(token);
-            return ResponseEntity.ok().build();
+            return ResponseEntity.ok(new TokenDTO(token,"Bearer"));
         } catch(Exception e)  {
             return ResponseEntity.badRequest().build();
         }
-
-
     }
 }

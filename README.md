@@ -575,6 +575,7 @@ public class SecurityConfigurations extends WebSecurityConfigurerAdapter {
 #### Authentication via Token
 
 Install the following dependency
+
 ```xml
 <dependency>
     <groupId>io.jsonwebtoken</groupId>
@@ -582,6 +583,7 @@ Install the following dependency
      <version>0.9.1</version>
 </dependency>
 ```
+
 Now, ammend the code below, removing the form login, disable the csrf and add a Stateless session, i.e. the app will no longer hold a session in memory. Now, the client need to present a token to authenticate.
 
 ```java
@@ -596,4 +598,59 @@ Now, ammend the code below, removing the form login, disable the csrf and add a 
     }
 ```
 
-Now we need to add a Controller for these new requests, given we no longer have a login form.
+Now we need to add a Auth Controller for these new requests, given we no longer have a login form.
+
+```java
+@RestController
+@RequestMapping("/auth")
+public class AuthenticationController {
+
+    @Autowired
+    private AuthenticationManager authManager;
+    @Autowired
+    private TokenService tokenService;
+
+    @PostMapping
+    public ResponseEntity<TokenDTO> autenticar(@RequestBody @Valid LoginForm form) {
+
+        UsernamePasswordAuthenticationToken dadosLogin = form.converter();
+
+        try {
+            Authentication authentication = authManager.authenticate(dadosLogin);
+
+            String token = tokenService.gerarToken(authentication);
+            return ResponseEntity.ok(new TokenDTO(token,"Bearer"));
+        } catch(Exception e)  {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+}
+```
+
+And inject a `token service` object, with has the responsibility to generate the JWS token, which controller sends to the client. We have used a TokenDTO to generate the body.
+
+```java
+@Service
+public class TokenService {
+    @Value("${forum.jwt.expiration}") # read from application properties
+    private String expiration;
+
+    @Value("${forum.jwt.secret}") # read from application properties
+    private String secret;
+
+    public String gerarToken(Authentication authentication) {
+        Usuario logado = (Usuario) authentication.getPrincipal();
+        Date hoje = new Date();
+        Date dataExpiracao = new Date(hoje.getTime() + Long.parseLong(expiration));
+        return Jwts.builder()
+                .setIssuer("API do forum ALura")
+                .setSubject(logado.getId().toString())
+                .setIssuedAt(hoje)
+                .setExpiration(dataExpiracao)
+                .signWith(SignatureAlgorithm.HS256,secret)
+                .compact();
+    }
+}
+```
+
+Notice we had to define a expiration time for the token and inject the authentication object.
