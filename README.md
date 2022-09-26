@@ -564,6 +564,8 @@ Devemos indicar ao Spring Security qual o algoritmo de hashing de senha que util
 @Configuration
 public class SecurityConfigurations extends WebSecurityConfigurerAdapter {
     @Autowired
+    private TokenService tokenService;
+    @Autowired
     private UserDetailsService autenticacaoService;
     // Deals with Authentication
     @Override
@@ -572,7 +574,7 @@ public class SecurityConfigurations extends WebSecurityConfigurerAdapter {
     }
 ```
 
-#### Authentication via Token
+### Authentication via Token
 
 Install the following dependency
 
@@ -594,11 +596,14 @@ Now, ammend the code below, removing the form login, disable the csrf and add a 
                 .antMatchers(HttpMethod.GET, "/topicos/*").permitAll()
                 .anyRequest().authenticated()
                 .and().csrf().disable()   // disable protection against attacks
-                .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS);
+                .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                .and().addFilterBefore(new AutenticacaoViaTokenFilter(tokenService), UsernamePasswordAuthenticationFilter.class);
     }
 ```
 
 Now we need to add a Auth Controller for these new requests, given we no longer have a login form.
+
+Here we receive the httpRequest mapped in "/auth", we use the userdata (email and password) in the body to sign in and if is authenticated, the we get a token from `tokenService` and we send it back as a response to the client as a `Bearer`.
 
 ```java
 @RestController
@@ -650,7 +655,43 @@ public class TokenService {
                 .signWith(SignatureAlgorithm.HS256,secret)
                 .compact();
     }
+    public boolean isTokenValid(String token) {
+        try {
+            Jwts.parser().setSigningKey(this.secret).parseClaimsJws(token);
+            return true;
+        }
+        catch (Exception e){
+            return false;
+        }
+    }
 }
 ```
 
 Notice we had to define a expiration time for the token and inject the authentication object.
+
+#### Validate the Token before execute the HTTP method requested
+
+In Spring we need to intercept the request using a `Filter` . For that we create a class AutenticacaoViaTokenFilter where we retrieve the token from the request, get it and then check if it is valid.
+
+```java
+public class AutenticacaoViaTokenFilter extends OncePerRequestFilter {
+
+//    Nao existe anotacao tipo @Autowired, deve se registrar esta classe no Security Configurations
+
+    @Override
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
+     // pega o token da requisicao e usa o metodo abaixo para pegar a parte que interessa
+        String token = recuperarToken(request);
+        boolean valido = tokenService.isTokenValid(token);
+        filterChain.doFilter(request,response);
+    }
+
+    private String recuperarToken(HttpServletRequest request) {
+        String token = request.getHeader("Authorization");
+        if (token == null || token.isEmpty() || !token.startsWith("Bearer")){
+            return  null;
+        }
+        return token.substring(7, token.length());
+    }
+}
+```

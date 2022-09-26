@@ -5,7 +5,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.builders.WebSecurity;
@@ -19,6 +18,8 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @EnableWebSecurity
 @Configuration
 public class SecurityConfigurations extends WebSecurityConfigurerAdapter {
+    @Autowired
+    private TokenService tokenService;
     @Autowired
     private UserDetailsService autenticacaoService;
 
@@ -36,6 +37,7 @@ public class SecurityConfigurations extends WebSecurityConfigurerAdapter {
     // Deals with Authorization
     @Override
     protected void configure(HttpSecurity http) throws Exception {
+
         http.authorizeRequests()
                 .antMatchers(HttpMethod.GET, "/topicos").permitAll()
                 .antMatchers(HttpMethod.GET, "/topicos/*").permitAll()
@@ -43,7 +45,7 @@ public class SecurityConfigurations extends WebSecurityConfigurerAdapter {
                 .anyRequest().authenticated()
                 .and().csrf().disable()   // disable protection against attacks
                 .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-                .and().addFilterBefore(new AutenticacaoViaTokenFilter(), UsernamePasswordAuthenticationFilter.class);
+                .and().addFilterBefore(new AutenticacaoViaTokenFilter(tokenService), UsernamePasswordAuthenticationFilter.class);
     }
 
     // Deals with resources: html, css, js

@@ -10,13 +10,20 @@ import java.io.IOException;
 
 public class AutenticacaoViaTokenFilter extends OncePerRequestFilter {
 
+    private TokenService tokenService;
+
+    public AutenticacaoViaTokenFilter(TokenService tokenService) {
+        this.tokenService = tokenService;
+    }
+
 //    Nao existe anotacao tipo @Autowired, deve se registrar esta classe no Security Configurations
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
      // pega o token da requisicao e usa o metodo abaixo para pegar a parte que interessa
         String token = recuperarToken(request);
-        System.out.println(token);
+        boolean valido = tokenService.isTokenValid(token);
+        System.out.println(valido);
         filterChain.doFilter(request,response);
     }
 
