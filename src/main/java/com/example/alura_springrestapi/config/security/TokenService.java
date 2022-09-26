@@ -1,4 +1,4 @@
-package com.example.alura_springrestapi.secutity;
+package com.example.alura_springrestapi.config.security;
 
 import com.example.alura_springrestapi.model.Usuario;
 import io.jsonwebtoken.Jwts;
