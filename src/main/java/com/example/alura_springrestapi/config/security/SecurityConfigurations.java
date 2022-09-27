@@ -1,5 +1,6 @@
 package com.example.alura_springrestapi.config.security;
 
+import com.example.alura_springrestapi.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -20,6 +21,8 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfigurations extends WebSecurityConfigurerAdapter {
     @Autowired
     private TokenService tokenService;
+    @Autowired
+    private UsuarioRepository repository;
     @Autowired
     private UserDetailsService autenticacaoService;
 
@@ -45,7 +48,7 @@ public class SecurityConfigurations extends WebSecurityConfigurerAdapter {
                 .anyRequest().authenticated()
                 .and().csrf().disable()   // disable protection against attacks
                 .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-                .and().addFilterBefore(new AutenticacaoViaTokenFilter(tokenService), UsernamePasswordAuthenticationFilter.class);
+                .and().addFilterBefore(new AutenticacaoViaTokenFilter(tokenService, repository), UsernamePasswordAuthenticationFilter.class);
     }
 
     // Deals with resources: html, css, js

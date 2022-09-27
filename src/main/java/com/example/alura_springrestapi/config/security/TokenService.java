@@ -1,6 +1,7 @@
 package com.example.alura_springrestapi.config.security;
 
 import com.example.alura_springrestapi.model.Usuario;
+import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import org.springframework.beans.factory.annotation.Value;
@@ -38,5 +39,10 @@ public class TokenService {
         catch (Exception e){
             return false;
         }
+    }
+
+    public Long getIdUsuario(String token) {
+        Claims claims = Jwts.parser().setSigningKey(this.secret).parseClaimsJws(token).getBody();
+        return Long.parseLong(claims.getSubject());
     }
 }

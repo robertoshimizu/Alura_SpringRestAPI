@@ -566,7 +566,15 @@ public class SecurityConfigurations extends WebSecurityConfigurerAdapter {
     @Autowired
     private TokenService tokenService;
     @Autowired
+    private UsuarioRepository repository;
+    @Autowired
     private UserDetailsService autenticacaoService;
+
+    @Override
+    @Bean
+    protected AuthenticationManager authenticationManager() throws Exception{
+        return super.authenticationManager();
+    }
     // Deals with Authentication
     @Override
     protected void configure(AuthenticationManagerBuilder auth) throws Exception {
@@ -591,13 +599,15 @@ Now, ammend the code below, removing the form login, disable the csrf and add a 
 ```java
 @Override
     protected void configure(HttpSecurity http) throws Exception {
+
         http.authorizeRequests()
                 .antMatchers(HttpMethod.GET, "/topicos").permitAll()
                 .antMatchers(HttpMethod.GET, "/topicos/*").permitAll()
+                .antMatchers(HttpMethod.POST, "/auth").permitAll()
                 .anyRequest().authenticated()
                 .and().csrf().disable()   // disable protection against attacks
                 .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-                .and().addFilterBefore(new AutenticacaoViaTokenFilter(tokenService), UsernamePasswordAuthenticationFilter.class);
+                .and().addFilterBefore(new AutenticacaoViaTokenFilter(tokenService, repository), UsernamePasswordAuthenticationFilter.class);
     }
 ```
 
@@ -617,12 +627,9 @@ public class AuthenticationController {
 
     @PostMapping
     public ResponseEntity<TokenDTO> autenticar(@RequestBody @Valid LoginForm form) {
-
         UsernamePasswordAuthenticationToken dadosLogin = form.converter();
-
         try {
             Authentication authentication = authManager.authenticate(dadosLogin);
-
             String token = tokenService.gerarToken(authentication);
             return ResponseEntity.ok(new TokenDTO(token,"Bearer"));
         } catch(Exception e)  {
@@ -664,6 +671,10 @@ public class TokenService {
             return false;
         }
     }
+    public Long getIdUsuario(String token) {
+        Claims claims = Jwts.parser().setSigningKey(this.secret).parseClaimsJws(token).getBody();
+        return Long.parseLong(claims.getSubject());
+    }
 }
 ```
 
@@ -683,6 +694,9 @@ public class AutenticacaoViaTokenFilter extends OncePerRequestFilter {
      // pega o token da requisicao e usa o metodo abaixo para pegar a parte que interessa
         String token = recuperarToken(request);
         boolean valido = tokenService.isTokenValid(token);
+        if (valido) {
+            autenticarCliente(token);
+        }
         filterChain.doFilter(request,response);
     }
 
@@ -692,6 +706,13 @@ public class AutenticacaoViaTokenFilter extends OncePerRequestFilter {
             return  null;
         }
         return token.substring(7, token.length());
+    }
+
+    private void autenticarCliente(String token) {
+        Long idUsuario = tokenService.getIdUsuario(token);
+        Optional<Usuario> usuario = repository.findById(idUsuario);
+        UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(usuario, null, usuario.get().getAuthorities());
+        SecurityContextHolder.getContext().setAuthentication(authentication);
     }
 }
 ```
